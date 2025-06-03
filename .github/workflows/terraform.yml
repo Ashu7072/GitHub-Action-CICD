@@ -14,10 +14,13 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 👈 fetch entire git history to allow full diff
 
       - name: Detect Changed Directory
         id: detect
         run: |
+          echo "Comparing ${GITHUB_EVENT_BEFORE} -> ${GITHUB_SHA}"
           changed_dirs=$(git diff ${{ github.event.before }} ${{ github.sha }} --name-only | awk -F/ '{print $1}' | sort -u | uniq)
           echo "Changed directories: $changed_dirs"
           echo "changed=$changed_dirs" >> $GITHUB_OUTPUT
