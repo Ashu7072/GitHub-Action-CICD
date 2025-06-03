@@ -4,70 +4,62 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'ec2/**'
-      - 's3/**'
   workflow_dispatch:
 
 jobs:
-  ec2:
-    if: contains(github.event.head_commit.message, 'ec2/') || github.event_name == 'workflow_dispatch'
-    name: EC2 Terraform Job
+  deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Check which directories changed
+        id: changed
+        run: |
+          echo "CHANGED_DIRS<<EOF" >> $GITHUB_ENV
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }} | cut -d/ -f1 | sort -u | grep -E '^(ec2|s3)$' >> $GITHUB_ENV || true
+          echo "EOF" >> $GITHUB_ENV
+
+      # Run EC2 Terraform if ec2/ changed
+      - name: Terraform EC2 Init
+        if: contains(env.CHANGED_DIRS, 'ec2')
         working-directory: ./ec2
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init
         run: terraform init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Terraform Validate
-        run: terraform validate
+      - name: Terraform EC2 Apply
+        if: contains(env.CHANGED_DIRS, 'ec2')
+        working-directory: ./ec2
+        run: |
+          terraform validate
+          terraform plan
+          terraform apply -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Terraform Plan
-        run: terraform plan
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-  s3:
-    if: contains(github.event.head_commit.message, 's3/') || github.event_name == 'workflow_dispatch'
-    name: S3 Terraform Job
-    runs-on: ubuntu-latest
-    defaults:
-      run:
+      # Run S3 Terraform if s3/ changed
+      - name: Terraform S3 Init
+        if: contains(env.CHANGED_DIRS, 's3')
         working-directory: ./s3
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init
         run: terraform init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        run: terraform plan
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Terraform S3 Apply
+        if: contains(env.CHANGED_DIRS, 's3')
+        working-directory: ./s3
+        run: |
+          terraform validate
+          terraform plan
+          terraform apply -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
