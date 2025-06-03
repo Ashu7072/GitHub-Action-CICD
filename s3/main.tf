@@ -12,6 +12,7 @@ terraform {
   }
 }
 
+
 resource "aws_s3_bucket" "example" {
   bucket = "my-unique-s3-bucket-615516515644"
   force_destroy = true

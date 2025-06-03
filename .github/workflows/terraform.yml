@@ -1,4 +1,4 @@
-name: Terraform Selective Deployment
+name: Terraform Selective Apply
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   selective-deploy:
-    name: Detect and Deploy Changed Directory
+    name: Apply Changed Terraform Module
     runs-on: ubuntu-latest
 
     env:
@@ -44,7 +44,3 @@ jobs:
       - name: Terraform Apply
         working-directory: ./${{ steps.detect.outputs.dir }}
         run: terraform apply -auto-approve
-
-      - name: Terraform Destroy
-        working-directory: ./${{ steps.detect.outputs.dir }}
-        run: terraform destroy -auto-approve
