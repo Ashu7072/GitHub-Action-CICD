@@ -1,14 +1,15 @@
-name: Terraform Deployment
+name: Terraform Destroy
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_dispatch:  # Trigger manually from GitHub UI
 
 jobs:
-  deploy:
+  destroy-ec2:
+    name: Destroy EC2 Resources
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ec2
 
     steps:
       - name: Checkout code
@@ -17,49 +18,37 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Check which directories changed
-        id: changed
-        run: |
-          echo "CHANGED_DIRS<<EOF" >> $GITHUB_ENV
-          git diff --name-only ${{ github.event.before }} ${{ github.sha }} | cut -d/ -f1 | sort -u | grep -E '^(ec2|s3)$' >> $GITHUB_ENV || true
-          echo "EOF" >> $GITHUB_ENV
-
-      # Run EC2 Terraform if ec2/ changed
-      - name: Terraform EC2 Init
-        if: contains(env.CHANGED_DIRS, 'ec2')
-        working-directory: ./ec2
+      - name: Terraform Init
         run: terraform init
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Terraform EC2 Apply
-        if: contains(env.CHANGED_DIRS, 'ec2')
-        working-directory: ./ec2
-        run: |
-          terraform validate
-          terraform plan
-          terraform apply -auto-approve
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
 
-      # Run S3 Terraform if s3/ changed
-      - name: Terraform S3 Init
-        if: contains(env.CHANGED_DIRS, 's3')
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  destroy-s3:
+    name: Destroy S3 Resources
+    runs-on: ubuntu-latest
+    needs: destroy-ec2
+    defaults:
+      run:
         working-directory: ./s3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
         run: terraform init
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Terraform S3 Apply
-        if: contains(env.CHANGED_DIRS, 's3')
-        working-directory: ./s3
-        run: |
-          terraform validate
-          terraform plan
-          terraform apply -auto-approve
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
