@@ -7,90 +7,44 @@ on:
   workflow_dispatch:
 
 jobs:
-  detect-changes:
+  selective-deploy:
+    name: Detect and Deploy Changed Directory
     runs-on: ubuntu-latest
-    outputs:
-      ec2_changed: ${{ steps.set.outputs.ec2_changed }}
-      s3_changed: ${{ steps.set.outputs.s3_changed }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Detect changed directories
-        id: set
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Detect Changed Directory
+        id: detect
         run: |
-          git diff --name-only ${{ github.event.before }} ${{ github.sha }} > changed.txt
-          echo "Changed files:"
-          cat changed.txt
-          
-          if grep -q '^ec2/' changed.txt; then
-            echo "ec2_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "ec2_changed=false" >> $GITHUB_OUTPUT
-          fi
-          
-          if grep -q '^s3/' changed.txt; then
-            echo "s3_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "s3_changed=false" >> $GITHUB_OUTPUT
-          fi
-
-  deploy-ec2:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.ec2_changed == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./ec2
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+          changed_dir=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | cut -d/ -f1 | sort -u | head -n1)
+          echo "Changed directory: $changed_dir"
+          echo "dir=$changed_dir" >> $GITHUB_OUTPUT
 
       - name: Terraform Init
+        working-directory: ./${{ steps.detect.outputs.dir }}
         run: terraform init
 
       - name: Terraform Validate
+        working-directory: ./${{ steps.detect.outputs.dir }}
         run: terraform validate
 
       - name: Terraform Plan
+        working-directory: ./${{ steps.detect.outputs.dir }}
         run: terraform plan
 
       - name: Terraform Apply
+        working-directory: ./${{ steps.detect.outputs.dir }}
         run: terraform apply -auto-approve
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-  deploy-s3:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.s3_changed == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./s3
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        run: terraform plan
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Terraform Destroy
+        working-directory: ./${{ steps.detect.outputs.dir }}
+        run: terraform destroy -auto-approve
