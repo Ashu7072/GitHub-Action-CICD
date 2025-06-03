@@ -7,7 +7,6 @@ terraform {
     bucket = "demobucket-7599"
     key    = "GitHUB-ACTION_CICD/s3"
     region = "us-east-1"
-    use_lockfile = true    # <-- replace dynamodb_table with this
   }
 }
 
