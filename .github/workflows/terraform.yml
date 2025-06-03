@@ -4,73 +4,70 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'ec2/**'
+      - 's3/**'
   workflow_dispatch:
 
 jobs:
-  detect-changes:
-    name: Detect Directory Changes
-    runs-on: ubuntu-latest
-    outputs:
-      ec2_changed: ${{ steps.filter.outputs.ec2 }}
-      s3_changed: ${{ steps.filter.outputs.s3 }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Check changed files
-        id: filter
-        run: |
-          echo "Checking changed files..."
-          git fetch origin main --depth=2
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
-          echo "$CHANGED_FILES"
-
-          if echo "$CHANGED_FILES" | grep -q '^ec2/'; then
-            echo "ec2=true" >> $GITHUB_OUTPUT
-          else
-            echo "ec2=false" >> $GITHUB_OUTPUT
-          fi
-
-          if echo "$CHANGED_FILES" | grep -q '^s3/'; then
-            echo "s3=true" >> $GITHUB_OUTPUT
-          else
-            echo "s3=false" >> $GITHUB_OUTPUT
-          fi
-
   ec2:
+    if: contains(github.event.head_commit.message, 'ec2/') || github.event_name == 'workflow_dispatch'
     name: EC2 Terraform Job
-    needs: detect-changes
-    if: needs.detect-changes.outputs.ec2_changed == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./ec2
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-      - run: terraform init
-      - run: terraform validate
-      - run: terraform plan
-      - run: terraform apply -auto-approve
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
   s3:
+    if: contains(github.event.head_commit.message, 's3/') || github.event_name == 'workflow_dispatch'
     name: S3 Terraform Job
-    needs: detect-changes
-    if: needs.detect-changes.outputs.s3_changed == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./s3
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-      - run: terraform init
-      - run: terraform validate
-      - run: terraform plan
-      - run: terraform apply -auto-approve
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
