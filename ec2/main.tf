@@ -16,7 +16,7 @@ resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 
   tags = {
-    Name = "main-vpc"
+    Name = "example-vpc"
   }
 }
 
@@ -26,7 +26,7 @@ resource "aws_subnet" "main" {
   cidr_block = "10.0.1.0/24"
 
   tags = {
-    Name = "main-subnet"
+    Name = "example-subnet"
   }
 }
 
@@ -35,7 +35,7 @@ resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "main-gw"
+    Name = "example-gw"
   }
 }
 
@@ -49,7 +49,7 @@ resource "aws_route_table" "r" {
   }
 
   tags = {
-    Name = "main-route"
+    Name = "example-route"
   }
 }
 
@@ -93,6 +93,6 @@ resource "aws_instance" "example" {
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]
 
   tags = {
-    Name = "Testing-instance"
+    Name = "example-instance"
   }
 }
