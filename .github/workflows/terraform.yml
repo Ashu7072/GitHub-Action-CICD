@@ -15,10 +15,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set Changed Directory
+      - name: Detect Changed Directory
         id: detect
         run: |
-          changed_dirs=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | awk -F/ '{print $1}' | sort -u)
+          changed_dirs=$(git diff ${{ github.event.before }} ${{ github.sha }} --name-only | awk -F/ '{print $1}' | sort -u | uniq)
           echo "Changed directories: $changed_dirs"
           echo "changed=$changed_dirs" >> $GITHUB_OUTPUT
 
