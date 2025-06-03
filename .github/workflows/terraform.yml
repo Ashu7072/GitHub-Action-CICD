@@ -1,18 +1,21 @@
-name: Terraform Destroy
+name: Terraform Deployment
 
 on:
-  workflow_dispatch:  # Trigger manually from GitHub UI
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  destroy-ec2:
-    name: Destroy EC2 Resources
+  ec2:
+    name: EC2 Terraform Job
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./ec2
-
+    if: github.event_name == 'workflow_dispatch' || contains(join(github.event.head_commit.message), 'ec2/') || contains(join(github.event.head_commit.added), 'ec2/') || contains(join(github.event.head_commit.modified), 'ec2/')
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Terraform
@@ -21,23 +24,28 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Destroy
-        run: terraform destroy -auto-approve
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
 
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-  destroy-s3:
-    name: Destroy S3 Resources
+  s3:
+    name: S3 Terraform Job
     runs-on: ubuntu-latest
-    needs: destroy-ec2
     defaults:
       run:
         working-directory: ./s3
-
+    if: github.event_name == 'workflow_dispatch' || contains(join(github.event.head_commit.message), 's3/') || contains(join(github.event.head_commit.added), 's3/') || contains(join(github.event.head_commit.modified), 's3/')
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Terraform
@@ -46,8 +54,14 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Destroy
-        run: terraform destroy -auto-approve
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
 
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
