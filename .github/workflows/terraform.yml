@@ -4,20 +4,16 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'ec2/**'
-      - 's3/**'
-  workflow_dispatch:  # allow manual run from GitHub UI
+  workflow_dispatch:
 
 jobs:
   ec2:
     name: EC2 Terraform Job
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'ec2') || github.event_name == 'push' && github.event.commits.*.modified | join(',') | contains('ec2/')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'ec2/') || contains(join(github.event.head_commit.modified, ''), 'ec2/')
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./ec2
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -43,12 +39,11 @@ jobs:
 
   s3:
     name: S3 Terraform Job
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 's3') || github.event_name == 'push' && github.event.commits.*.modified | join(',') | contains('s3/')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 's3/') || contains(join(github.event.head_commit.modified, ''), 's3/')
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./s3
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
