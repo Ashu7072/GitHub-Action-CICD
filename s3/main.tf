@@ -5,13 +5,13 @@ provider "aws" {
 terraform {
   backend "s3" {
     bucket = "demobucket-7599"
-    key = "TERRAFORM-PROJECT/ec2"
+    key = "GitHUB-ACTION_CICD/s3"
     region = "us-east-1"
     dynamodb_table = "terraform-locks"    
   }
 }
 
 resource "aws_s3_bucket" "example" {
-  bucket = "my-unique-s3-bucket-123456"
+  bucket = "my-unique-s3-bucket-615516515644"
   force_destroy = true
 }

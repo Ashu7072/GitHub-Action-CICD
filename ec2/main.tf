@@ -5,7 +5,7 @@ provider "aws" {
 terraform {
   backend "s3" {
     bucket = "demobucket-7599"
-    key = "TERRAFORM-PROJECT/ec2"
+    key = "GitHUB-ACTION_CICD/ec2"
     region = "us-east-1"
     dynamodb_table = "terraform-locks"    
   }
